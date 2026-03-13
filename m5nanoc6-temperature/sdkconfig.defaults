@@ -1,0 +1,58 @@
+# sdkconfig.defaults for M5NanoC6 Matter Temperature Sensor
+# These settings are applied on top of the ESP-IDF defaults when you run:
+#   idf.py set-target esp32c6
+#   idf.py build
+
+# -----------------------------------------------------------------------
+# Chip / Target
+# -----------------------------------------------------------------------
+CONFIG_IDF_TARGET="esp32c6"
+
+# -----------------------------------------------------------------------
+# Wi-Fi – required for Matter over Wi-Fi
+# -----------------------------------------------------------------------
+CONFIG_ESP_WIFI_ENABLED=y
+CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
+
+# -----------------------------------------------------------------------
+# Matter (CHIP) core settings
+# -----------------------------------------------------------------------
+CONFIG_ENABLE_CHIP_SHELL=y
+CONFIG_CHIP_DEVICE_TYPE=770           # 0x0302 = Temperature Sensor
+CONFIG_CHIP_DEVICE_VENDOR_ID=0xFFF1   # Test VID (use real VID for production)
+CONFIG_CHIP_DEVICE_PRODUCT_ID=0x8001  # Test PID
+CONFIG_CHIP_DEVICE_HARDWARE_VERSION=1
+CONFIG_CHIP_DEVICE_HARDWARE_VERSION_STRING="1.0"
+CONFIG_CHIP_DEVICE_SOFTWARE_VERSION=1
+CONFIG_CHIP_DEVICE_SOFTWARE_VERSION_STRING="1.0.0"
+
+# Product & device info (shown in Apple Home)
+CONFIG_CHIP_DEVICE_PRODUCT_NAME="M5NanoC6 Temp Sensor"
+CONFIG_CHIP_DEVICE_VENDOR_NAME="M5Stack"
+
+# Discriminator and passcode (for initial commissioning).
+# Change these for production firmware!
+CONFIG_CHIP_DEVICE_DISCRIMINATOR=3840
+CONFIG_CHIP_DEVICE_SPAKE2_PASSCODE=20202021
+
+# -----------------------------------------------------------------------
+# NVS / Storage
+# -----------------------------------------------------------------------
+CONFIG_NVS_ENCRYPTION=n
+
+# -----------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_CHIP_LOG_LEVEL=4   # 4 = Info
+
+# -----------------------------------------------------------------------
+# FreeRTOS
+# -----------------------------------------------------------------------
+CONFIG_FREERTOS_HZ=1000
+
+# -----------------------------------------------------------------------
+# USB Serial / JTAG console (M5NanoC6 uses USB-C for serial output)
+# -----------------------------------------------------------------------
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG_ENABLED=y

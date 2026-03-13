@@ -1,0 +1,36 @@
+/* nrf52840dongle_nrf52840.overlay
+ *
+ * Devicetree overlay for nRF52840 Dongle (PCA10059)
+ *
+ * Enables:
+ *   - The on-chip TEMP peripheral (nRF5 temperature sensor driver)
+ *   - USB CDC ACM for the serial console
+ *
+ * The nRF52840 TEMP peripheral is exposed under the alias "temp" so that
+ * the application can retrieve it with DEVICE_DT_GET(DT_NODELABEL(temp)).
+ */
+
+/ {
+    chosen {
+        /* Route the Zephyr shell/console over USB CDC ACM */
+        zephyr,console = &cdc_acm_uart0;
+        zephyr,shell-uart = &cdc_acm_uart0;
+    };
+
+    aliases {
+        /* Expose the on-chip temperature sensor under the "temp" label */
+        temp = &temp_sensor;
+    };
+};
+
+/* Enable the nRF52840 on-chip temperature sensor */
+&temp_sensor {
+    status = "okay";
+};
+
+/* Enable USB device stack */
+&zephyr_udc0 {
+    cdc_acm_uart0: cdc_acm_uart0 {
+        compatible = "zephyr,cdc-acm-uart";
+    };
+};

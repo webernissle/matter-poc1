@@ -1,3 +1,12 @@
+# ESP-IDF build artifacts
+sdkconfig
+sdkconfig.old
+build/
+
+# nRF Connect SDK / Zephyr build artifacts
+# (the build/ directories are already covered above)
+.west/
+
 # Prerequisites
 *.d
 
