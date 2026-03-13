@@ -1,0 +1,14 @@
+# Custom flash partition table for the M5NanoC6 Matter Temperature Sensor
+# This table adds a large NVS partition required by the Matter stack for
+# storing fabric credentials and other persistent data.
+#
+# Total flash size assumed: 4 MB (default for M5NanoC6 / ESP32-C6)
+#
+# Name,   Type,  SubType,  Offset,   Size,    Flags
+nvs,       data,  nvs,      0x9000,   0x6000,
+otadata,   data,  ota,      0xf000,   0x2000,
+phy_init,  data,  phy,      0x11000,  0x1000,
+ota_0,     app,   ota_0,    0x20000,  0xE0000,
+ota_1,     app,   ota_1,    0x100000, 0xE0000,
+chip_mfg,  data,  nvs,      0x1E0000, 0x6000,
+nvs_ext,   data,  nvs,      0x1E6000, 0x10000,
