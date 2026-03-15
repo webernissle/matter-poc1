@@ -59,6 +59,8 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+managed_components/
+dependencies.lock
 
 # debug information files
 *.dwo

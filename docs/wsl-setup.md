@@ -80,14 +80,19 @@ winget install --id dorssel.usbipd-win -e
 
 Restart the PowerShell session after installation.
 
+
 ### 2.2 Install the USB/IP Linux kernel modules in WSL2
 
 ```bash
 # Inside Ubuntu WSL2 shell
 sudo apt-get install -y linux-tools-generic hwdata
-sudo update-alternatives --install /usr/local/bin/usbip usbip \
-    /usr/lib/linux-tools/$(uname -r)/usbip 20
+# If update-alternatives fails because /usr/lib/linux-tools/$(uname -r)/usbip does not exist,
+# check available versions:
+ls /usr/lib/linux-tools/*/usbip
+# Then set up usbip manually if needed:
+sudo ln -sf /usr/lib/linux-tools/<version>/usbip /usr/local/bin/usbip
 ```
+> **Note:** If usbip is already available, skip this step.
 
 ### 2.3 Attach a USB device to WSL2
 
@@ -146,6 +151,7 @@ sudo apt-get update && sudo apt-get install -y \
     pkg-config \
     xz-utils file
 ```
+> **Note:** All dependencies should be installed globally. If you are in a Python virtualenv, deactivate it before running pip installs for tools like west or nrfutil.
 
 ---
 
@@ -157,23 +163,29 @@ Follow the detailed instructions in the M5NanoC6 README:
 Summary:
 
 ```bash
+```bash
 # Clone ESP-IDF
 mkdir -p ~/esp && cd ~/esp
-git clone --recursive --branch v5.2 https://github.com/espressif/esp-idf.git
+if [ ! -d esp-idf ]; then
+    git clone --recursive --branch v5.2 https://github.com/espressif/esp-idf.git
+fi
 cd esp-idf && ./install.sh esp32c6
 
 # Clone ESP Matter SDK
 cd ~/esp
-git clone --recursive --branch v1.3 https://github.com/espressif/esp-matter.git
+if [ ! -d esp-matter ]; then
+    git clone --recursive --branch v1.3 https://github.com/espressif/esp-matter.git
+fi
 cd esp-matter && ./install.sh
 
-# Add to ~/.bashrc
+# Add to ~/.bashrc (idempotent)
 cat >> ~/.bashrc << 'EOF'
 source ~/esp/esp-idf/export.sh > /dev/null 2>&1
 source ~/esp/esp-matter/export.sh > /dev/null 2>&1
 export ESP_MATTER_PATH=~/esp/esp-matter
 EOF
 source ~/.bashrc
+```
 ```
 
 ---
@@ -186,8 +198,9 @@ Follow the detailed instructions in the nRF52840 Dongle README:
 Summary:
 
 ```bash
-# Install west
-pip3 install --user west
+```bash
+# Install west (global, not --user, to avoid virtualenv issues)
+pip3 install west
 echo 'export PATH=$HOME/.local/bin:$PATH' >> ~/.bashrc
 source ~/.bashrc
 
@@ -197,10 +210,10 @@ west init -m https://github.com/nrfconnect/sdk-nrf --mr v2.6.0
 west update
 west zephyr-export
 
-# Install Python requirements
-pip3 install --user -r ~/ncs/zephyr/scripts/requirements.txt
-pip3 install --user -r ~/ncs/nrf/scripts/requirements-base.txt
-pip3 install --user -r ~/ncs/bootloader/mcuboot/scripts/requirements.txt
+# Install Python requirements (global, not --user)
+pip3 install -r ~/ncs/zephyr/scripts/requirements.txt
+pip3 install -r ~/ncs/nrf/scripts/requirements-base.txt
+pip3 install -r ~/ncs/bootloader/mcuboot/scripts/requirements.txt
 
 # Install Zephyr SDK (ARM toolchain)
 cd ~/ncs
@@ -208,16 +221,17 @@ wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.5/zeph
 tar xf zephyr-sdk-0.16.5_linux-x86_64.tar.xz
 cd zephyr-sdk-0.16.5 && ./setup.sh
 
-# Install nrfutil
-pip3 install --user nrfutil
+# Install nrfutil (global, not --user)
+pip3 install nrfutil
+```
+> **Note:** If you encounter '--user' install errors, deactivate any Python virtualenv and use global pip installs.
 ```
 
 ---
 
 ## Part 6 – Recommended Shell Configuration
 
-Add the following block to your `~/.bashrc` so that all tools are available in
-every new terminal session:
+Add the following block to your `~/.bashrc` so that all tools are available in every new terminal session:
 
 ```bash
 # -----------------------------------------------------------------------
@@ -242,7 +256,7 @@ if [ -d ~/ncs ]; then
     export ZEPHYR_BASE=~/ncs/zephyr
 fi
 
-# nrfutil and west (installed via pip --user)
+# nrfutil and west (installed globally)
 export PATH="$HOME/.local/bin:$PATH"
 
 # Zephyr SDK

@@ -70,7 +70,7 @@ sudo apt-get update && sudo apt-get install -y \
 # Clone ESP-IDF (v5.2 LTS branch)
 mkdir -p ~/esp
 cd ~/esp
-git clone --recursive --branch v5.2 \
+git clone --recursive --branch v5.4.1 \
     https://github.com/espressif/esp-idf.git
 
 # Install the ESP32-C6 toolchain
@@ -82,12 +82,12 @@ echo 'source ~/esp/esp-idf/export.sh > /dev/null 2>&1' >> ~/.bashrc
 source ~/esp/esp-idf/export.sh
 ```
 
-### 1.2 Install ESP Matter SDK v1.3
+### 1.2 Install ESP Matter SDK v1.5
 
 ```bash
 # Clone the ESP Matter SDK
 cd ~/esp
-git clone --recursive --branch v1.3 \
+git clone --recursive --branch release/v1.5 \
     https://github.com/espressif/esp-matter.git
 
 # Install Matter SDK dependencies
@@ -111,6 +111,7 @@ source $ESP_MATTER_PATH/export.sh
 
 ## Step 2 – Configure the Project
 
+
 ### 2.1 Navigate to the project directory
 
 ```bash
@@ -118,9 +119,12 @@ source $ESP_MATTER_PATH/export.sh
 cd ~/matter-poc1/m5nanoc6-temperature
 ```
 
+> **Important:** All `idf.py` commands must be run from the project directory (e.g., `~/matter-poc1/m5nanoc6-temperature`). Running them from the ESP-IDF root or other directories will result in errors.
+
 ### 2.2 Set the target chip
 
 ```bash
+# Run this from the project directory:
 idf.py set-target esp32c6
 ```
 

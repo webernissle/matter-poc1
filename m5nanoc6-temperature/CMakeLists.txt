@@ -1,5 +1,5 @@
 # CMakeLists.txt for M5NanoC6 Matter Temperature Sensor
-# Requires: ESP-IDF v5.2+ and ESP Matter SDK
+# Requires: ESP-IDF v5.5.3+ and ESP Matter SDK v1.5
 
 cmake_minimum_required(VERSION 3.16)
 
@@ -10,9 +10,13 @@ if(NOT DEFINED ENV{ESP_MATTER_PATH})
             "Please source the ESP Matter SDK setup script first.")
 endif()
 
+set(ESP_MATTER_PATH $ENV{ESP_MATTER_PATH})
+set(MATTER_SDK_PATH ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip)
+
+# Include ESP Matter SDK components and connectedhomeip (provides chip component)
 set(EXTRA_COMPONENT_DIRS
-    $ENV{ESP_MATTER_PATH}/components
-    $ENV{ESP_MATTER_PATH}/connectedhomeip/connectedhomeip/src/platform/ESP32
+    "${MATTER_SDK_PATH}/config/esp32/components"
+    "${ESP_MATTER_PATH}/components"
 )
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
