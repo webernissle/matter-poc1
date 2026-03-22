@@ -1,58 +1,49 @@
-# sdkconfig.defaults for M5NanoC6 Matter Temperature Sensor
-# These settings are applied on top of the ESP-IDF defaults when you run:
-#   idf.py set-target esp32c6
-#   idf.py build
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 
-# -----------------------------------------------------------------------
-# Chip / Target
-# -----------------------------------------------------------------------
-CONFIG_IDF_TARGET="esp32c6"
+#enable BT
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
 
-# -----------------------------------------------------------------------
-# Wi-Fi – required for Matter over Wi-Fi
-# -----------------------------------------------------------------------
-CONFIG_ESP_WIFI_ENABLED=y
+#disable BT connection reattempt
+CONFIG_BT_NIMBLE_ENABLE_CONN_REATTEMPT=n
+
+#enable lwip ipv6 autoconfig
+CONFIG_LWIP_IPV6_AUTOCONFIG=y
+
+# Use a custom partition table
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_OFFSET=0xC000
+
+#enable lwIP route hooks
+CONFIG_LWIP_HOOK_IP6_ROUTE_DEFAULT=y
+CONFIG_LWIP_HOOK_ND6_GET_GW_DEFAULT=y
+
+# Button
+CONFIG_BUTTON_PERIOD_TIME_MS=20
+CONFIG_BUTTON_LONG_PRESS_TIME_MS=5000
+
+# disable softap by default
 CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
 
-# -----------------------------------------------------------------------
-# Matter (CHIP) core settings
-# -----------------------------------------------------------------------
-CONFIG_ENABLE_CHIP_SHELL=y
-CONFIG_CHIP_DEVICE_TYPE=770           # 0x0302 = Temperature Sensor
-CONFIG_CHIP_DEVICE_VENDOR_ID=0xFFF1   # Test VID (use real VID for production)
-CONFIG_CHIP_DEVICE_PRODUCT_ID=0x8001  # Test PID
-CONFIG_CHIP_DEVICE_HARDWARE_VERSION=1
-CONFIG_CHIP_DEVICE_HARDWARE_VERSION_STRING="1.0"
-CONFIG_CHIP_DEVICE_SOFTWARE_VERSION=1
-CONFIG_CHIP_DEVICE_SOFTWARE_VERSION_STRING="1.0.0"
+CONFIG_ENABLE_WIFI_AP=n
 
-# Product & device info (shown in Apple Home)
-CONFIG_CHIP_DEVICE_PRODUCT_NAME="M5NanoC6 Temp Sensor"
-CONFIG_CHIP_DEVICE_VENDOR_NAME="M5Stack"
+# Enable HKDF in mbedtls
+CONFIG_MBEDTLS_HKDF_C=y
 
-# Discriminator and passcode (for initial commissioning).
-# Change these for production firmware!
-CONFIG_CHIP_DEVICE_DISCRIMINATOR=3840
-CONFIG_CHIP_DEVICE_SPAKE2_PASSCODE=20202021
+# Increase LwIP IPv6 address number to 6 (MAX_FABRIC + 1)
+# unique local addresses for fabrics(MAX_FABRIC), a link local address(1)
+CONFIG_LWIP_IPV6_NUM_ADDRESSES=6
 
-# -----------------------------------------------------------------------
-# NVS / Storage
-# -----------------------------------------------------------------------
-CONFIG_NVS_ENCRYPTION=n
+# This example only use 4 dynamic endpoints
+CONFIG_ESP_MATTER_MAX_DYNAMIC_ENDPOINT_COUNT=4
 
-# -----------------------------------------------------------------------
-# Logging
-# -----------------------------------------------------------------------
-CONFIG_LOG_DEFAULT_LEVEL_INFO=y
-CONFIG_CHIP_LOG_LEVEL=4   # 4 = Info
+# ESP32-DevKitC Settings
+# Buttons
+CONFIG_BSP_BUTTONS_NUM=1
+CONFIG_BSP_BUTTON_1_TYPE_GPIO=y
+CONFIG_BSP_BUTTON_1_GPIO=0
+CONFIG_BSP_BUTTON_1_LEVEL=0
 
-# -----------------------------------------------------------------------
-# FreeRTOS
-# -----------------------------------------------------------------------
-CONFIG_FREERTOS_HZ=1000
-
-# -----------------------------------------------------------------------
-# USB Serial / JTAG console (M5NanoC6 uses USB-C for serial output)
-# -----------------------------------------------------------------------
-CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
-CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG_ENABLED=y
+# Enable OTA Requestor
+CONFIG_ENABLE_OTA_REQUESTOR=y
