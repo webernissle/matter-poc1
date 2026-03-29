@@ -3,6 +3,8 @@
 A proof-of-concept implementation of two **Matter temperature sensor end devices**
 that report data through an **Apple HomePod mini** and are visible in **Apple Home**.
 
+Running on WSL or Ubuntu
+
 ---
 
 ## Devices
