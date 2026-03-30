@@ -160,33 +160,6 @@ sudo apt-get update && sudo apt-get install -y \
 Follow the detailed instructions in the M5NanoC6 README:
 [`../m5nanoc6-temperature/README.md`](../m5nanoc6-temperature/README.md)
 
-Summary:
-
-```bash
-```bash
-# Clone ESP-IDF
-mkdir -p ~/esp && cd ~/esp
-if [ ! -d esp-idf ]; then
-    git clone --recursive --branch v5.2 https://github.com/espressif/esp-idf.git
-fi
-cd esp-idf && ./install.sh esp32c6
-
-# Clone ESP Matter SDK
-cd ~/esp
-if [ ! -d esp-matter ]; then
-    git clone --recursive --branch v1.3 https://github.com/espressif/esp-matter.git
-fi
-cd esp-matter && ./install.sh
-
-# Add to ~/.bashrc (idempotent)
-cat >> ~/.bashrc << 'EOF'
-source ~/esp/esp-idf/export.sh > /dev/null 2>&1
-source ~/esp/esp-matter/export.sh > /dev/null 2>&1
-export ESP_MATTER_PATH=~/esp/esp-matter
-EOF
-source ~/.bashrc
-```
-```
 
 ---
 
@@ -194,38 +167,6 @@ source ~/.bashrc
 
 Follow the detailed instructions in the nRF52840 Dongle README:
 [`../nrf52840-dongle-temperature/README.md`](../nrf52840-dongle-temperature/README.md)
-
-Summary:
-
-```bash
-```bash
-# Install west (global, not --user, to avoid virtualenv issues)
-pip3 install west
-echo 'export PATH=$HOME/.local/bin:$PATH' >> ~/.bashrc
-source ~/.bashrc
-
-# Initialise nRF Connect SDK
-mkdir -p ~/ncs && cd ~/ncs
-west init -m https://github.com/nrfconnect/sdk-nrf --mr v2.6.0
-west update
-west zephyr-export
-
-# Install Python requirements (global, not --user)
-pip3 install -r ~/ncs/zephyr/scripts/requirements.txt
-pip3 install -r ~/ncs/nrf/scripts/requirements-base.txt
-pip3 install -r ~/ncs/bootloader/mcuboot/scripts/requirements.txt
-
-# Install Zephyr SDK (ARM toolchain)
-cd ~/ncs
-wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.5/zephyr-sdk-0.16.5_linux-x86_64.tar.xz
-tar xf zephyr-sdk-0.16.5_linux-x86_64.tar.xz
-cd zephyr-sdk-0.16.5 && ./setup.sh
-
-# Install nrfutil (global, not --user)
-pip3 install nrfutil
-```
-> **Note:** If you encounter '--user' install errors, deactivate any Python virtualenv and use global pip installs.
-```
 
 ---
 
