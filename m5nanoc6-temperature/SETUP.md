@@ -49,6 +49,8 @@ idf.py --version  # Should show: ESP-IDF v5.4.1
 
 ```bash
 # Clone ESP-Matter v1.5 (release branch)
+sudo apt-get install -y libglib2.0-dev-bin
+sudo apt install git gcc g++ pkg-config libssl-dev libavahi-client-dev libicu-dev
 cd ~/esp
 git clone --recursive --branch release/v1.5 \
     https://github.com/espressif/esp-matter.git
