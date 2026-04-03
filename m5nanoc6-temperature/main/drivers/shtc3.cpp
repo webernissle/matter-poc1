@@ -10,7 +10,7 @@
 #include <esp_log.h>
 #include <esp_timer.h>
 #include <esp_random.h>
-#include <driver/i2c.h>
+#include <driver/i2c_master.h>
 
 #include <lib/support/CodeUtils.h>
 
@@ -20,7 +20,6 @@ static const char * TAG = "shtc3";
 
 #define I2C_MASTER_SCL_IO CONFIG_SHTC3_I2C_SCL_PIN
 #define I2C_MASTER_SDA_IO CONFIG_SHTC3_I2C_SDA_PIN
-#define I2C_MASTER_NUM I2C_NUM_0    /*!< I2C port number for master dev */
 #define I2C_MASTER_FREQ_HZ 100000   /*!< I2C master clock frequency */
 
 #define SHTC3_SENSOR_ADDR 0x70      /*!< I2C address of SHTC3 sensor */
@@ -28,6 +27,8 @@ static const char * TAG = "shtc3";
 typedef struct {
     shtc3_sensor_config_t *config;
     esp_timer_handle_t timer;
+    i2c_master_bus_handle_t i2c_bus;
+    i2c_master_dev_handle_t i2c_dev;
     bool is_initialized = false;
 } shtc3_sensor_ctx_t;
 
@@ -35,50 +36,58 @@ static shtc3_sensor_ctx_t s_ctx;
 
 static esp_err_t shtc3_init_i2c()
 {
-    i2c_config_t i2c_conf = {
-        .mode = I2C_MODE_MASTER,
+    i2c_master_bus_config_t bus_config = {
+        .i2c_port = I2C_NUM_0,
         .sda_io_num = I2C_MASTER_SDA_IO,
         .scl_io_num = I2C_MASTER_SCL_IO,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master = {
-            .clk_speed = I2C_MASTER_FREQ_HZ,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .flags = {
+            .enable_internal_pullup = true,
         },
     };
 
-    esp_err_t err = i2c_param_config(I2C_MASTER_NUM, &i2c_conf);
+    esp_err_t err = i2c_new_master_bus(&bus_config, &s_ctx.i2c_bus);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to configure I2C driver, err:%d", err);
+        ESP_LOGE(TAG, "Failed to create I2C master bus, err:%d", err);
         return err;
     }
 
-    return i2c_driver_install(I2C_MASTER_NUM, I2C_MODE_MASTER, 0, 0, 0);
+    i2c_device_config_t dev_config = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = SHTC3_SENSOR_ADDR,
+        .scl_speed_hz = I2C_MASTER_FREQ_HZ,
+    };
+
+    err = i2c_master_bus_add_device(s_ctx.i2c_bus, &dev_config, &s_ctx.i2c_dev);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to add SHTC3 device to I2C bus, err:%d", err);
+        i2c_del_master_bus(s_ctx.i2c_bus);
+        s_ctx.i2c_bus = NULL;
+        return err;
+    }
+
+    return ESP_OK;
 }
 
 static esp_err_t shtc3_read(uint8_t *data, size_t size)
 {
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (SHTC3_SENSOR_ADDR << 1) | I2C_MASTER_WRITE, true /* enable_ack */);
-    // Read temperature first then humidity, with clock stretching enabled
-    i2c_master_write_byte(cmd, 0x7C, true /* enable_ack */);
-    i2c_master_write_byte(cmd, 0xA2, true /* enable_ack */);
-    i2c_master_stop(cmd);
-    i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(1000));
-    i2c_cmd_link_delete(cmd);
-    cmd = NULL;
+    // Read temperature first then humidity, with clock stretching disabled
+    uint8_t cmd_data[] = {0x7C, 0xA2};
+    esp_err_t err = i2c_master_transmit(s_ctx.i2c_dev, cmd_data, sizeof(cmd_data), 1000);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "SHTC3 write command failed, err:%d", err);
+        return err;
+    }
 
     // Wait for measurement to complete
     vTaskDelay(pdMS_TO_TICKS(15));
 
-    cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (SHTC3_SENSOR_ADDR << 1) | I2C_MASTER_READ, true /* enable_ack */);
-    i2c_master_read(cmd, data, size, I2C_MASTER_LAST_NACK);
-    i2c_master_stop(cmd);
-    i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(1000));
-    i2c_cmd_link_delete(cmd);
-    cmd = NULL;
+    err = i2c_master_receive(s_ctx.i2c_dev, data, size, 1000);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "SHTC3 read data failed, err:%d", err);
+        return err;
+    }
 
     return ESP_OK;
 }
