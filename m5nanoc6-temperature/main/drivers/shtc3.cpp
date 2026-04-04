@@ -38,8 +38,8 @@ static esp_err_t shtc3_init_i2c()
 {
     i2c_master_bus_config_t bus_config = {
         .i2c_port = I2C_NUM_0,
-        .sda_io_num = I2C_MASTER_SDA_IO,
-        .scl_io_num = I2C_MASTER_SCL_IO,
+        .sda_io_num = (gpio_num_t) I2C_MASTER_SDA_IO,
+        .scl_io_num = (gpio_num_t) I2C_MASTER_SCL_IO,
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .glitch_ignore_cnt = 7,
         .flags = {
