@@ -16,24 +16,58 @@
 
 #include <drivers/shtc3.h>
 
+/** Tag used by ESP logging APIs for this driver. */
 static const char * TAG = "sht3x";
 
+/** GPIO used for I2C SCL, configured via Kconfig (`CONFIG_SHTC3_I2C_SCL_PIN`). */
 #define I2C_MASTER_SCL_IO CONFIG_SHTC3_I2C_SCL_PIN
+/** GPIO used for I2C SDA, configured via Kconfig (`CONFIG_SHTC3_I2C_SDA_PIN`). */
 #define I2C_MASTER_SDA_IO CONFIG_SHTC3_I2C_SDA_PIN
+/** I2C bus speed in Hz.
+ *
+ * Official ESP-IDF I2C reference:
+ * https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/i2c.html
+ */
 #define I2C_MASTER_FREQ_HZ 100000   /*!< I2C master clock frequency */
 
+/**
+ * I2C address for the SHT3x sensor family when ADDR is tied low.
+ *
+ * Official Sensirion SHT3x datasheet (addresses and commands):
+ * https://sensirion.com/products/catalog/SHT30/
+ */
 #define SHT3X_SENSOR_ADDR 0x44      /*!< I2C address of SHT3x/SHT30/SHT31 sensor */
 
+/**
+ * Runtime context shared by the SHT3x driver.
+ *
+ * Stores handles and configuration required for periodic sensor reads.
+ */
 typedef struct {
+    /** Application-provided configuration and callback endpoints. */
     shtc3_sensor_config_t *config;
+    /** Periodic timer used to trigger measurements and callbacks. */
     esp_timer_handle_t timer;
+    /** ESP-IDF I2C master bus handle. */
     i2c_master_bus_handle_t i2c_bus;
+    /** Device handle for the configured SHT3x device on the I2C bus. */
     i2c_master_dev_handle_t i2c_dev;
+    /** Tracks whether initialization has completed successfully. */
     bool is_initialized = false;
 } shtc3_sensor_ctx_t;
 
+/**
+ * Global singleton driver context.
+ *
+ * This driver currently supports a single SHT3x instance.
+ */
 static shtc3_sensor_ctx_t s_ctx;
 
+/**
+ * Scan the active I2C bus and log all responding 7-bit addresses.
+ *
+ * Useful during bring-up to validate wiring and address selection.
+ */
 static void i2c_scan_devices()
 {
     ESP_LOGI(TAG, "Scanning I2C bus for devices...");
@@ -45,6 +79,13 @@ static void i2c_scan_devices()
     }
 }
 
+/**
+ * Initialize the I2C master bus and register the SHT3x device.
+ *
+ * Returns:
+ * - `ESP_OK` on success
+ * - an ESP-IDF error code on bus/device setup failure
+ */
 static esp_err_t shtc3_init_i2c()
 {
     i2c_master_bus_config_t bus_config = {
@@ -83,6 +124,21 @@ static esp_err_t shtc3_init_i2c()
     return ESP_OK;
 }
 
+/**
+ * Trigger a single-shot SHT3x measurement and read raw bytes.
+ *
+ * The command `0x2400` is "single shot, high repeatability, no clock stretching"
+ * per the official SHT3x datasheet:
+ * https://sensirion.com/products/catalog/SHT30/
+ *
+ * Parameters:
+ * - `data`: output buffer receiving raw measurement bytes
+ * - `size`: number of bytes to read (expected: 6)
+ *
+ * Returns:
+ * - `ESP_OK` on success
+ * - an ESP-IDF error code on transmit/receive failure
+ */
 static esp_err_t shtc3_read(uint8_t *data, size_t size)
 {
     // Single-shot measurement, high repeatability, clock stretching disabled.
@@ -106,18 +162,39 @@ static esp_err_t shtc3_read(uint8_t *data, size_t size)
     return ESP_OK;
 }
 
-// Temperature in degree Celsius
+/**
+ * Convert raw SHT3x temperature ticks to degrees Celsius.
+ *
+ * Formula from the official SHT3x datasheet:
+ * $T = -45 + 175 \cdot S_T / (2^{16} - 1)$
+ */
 static float shtc3_get_temp(uint16_t raw_temp)
 {
     return 175.0f * (static_cast<float>(raw_temp) / 65535.0f) - 45.0f;
 }
 
-// Humidity in percentage
+/**
+ * Convert raw SHT3x humidity ticks to relative humidity percentage.
+ *
+ * Formula from the official SHT3x datasheet:
+ * $RH = 100 \cdot S_{RH} / (2^{16} - 1)$
+ */
 static float shtc3_get_humidity(uint16_t raw_humidity)
 {
     return 100.0f * (static_cast<float>(raw_humidity) / 65535.0f);
 }
 
+/**
+ * Read one measurement from the sensor and convert to engineering units.
+ *
+ * Parameters:
+ * - `temp`: output temperature in Celsius
+ * - `humidity`: output relative humidity in percent
+ *
+ * Returns:
+ * - `ESP_OK` on success
+ * - an ESP-IDF error code when read/conversion cannot be completed
+ */
 static esp_err_t shtc3_get_read_temp_and_humidity(float & temp, float & humidity)
 {
     // foreach temperature and humidity: two bytes data, one byte for checksum
@@ -137,6 +214,11 @@ static esp_err_t shtc3_get_read_temp_and_humidity(float & temp, float & humidity
     return ESP_OK;
 }
 
+/**
+ * Periodic timer callback: read sensor and forward values via user callbacks.
+ *
+ * This callback is invoked by `esp_timer` at the configured interval.
+ */
 static void timer_cb_internal(void *arg)
 {
     auto *ctx = (shtc3_sensor_ctx_t *) arg;
@@ -160,6 +242,25 @@ static void timer_cb_internal(void *arg)
     }
 }
 
+/**
+ * Initialize the SHT3x sensor driver and start periodic sampling.
+ *
+ * Steps:
+ * 1. Validate configuration and callback pointers.
+ * 2. Initialize I2C and probe the sensor with a soft reset (`0x30A2`).
+ * 3. Create and start a periodic ESP timer that reads and publishes values.
+ *
+ * Official references:
+ * - ESP timer API: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html
+ * - ESP I2C API: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/i2c.html
+ * - Sensirion SHT3x datasheet: https://sensirion.com/products/catalog/SHT30/
+ *
+ * Returns:
+ * - `ESP_OK` on success
+ * - `ESP_ERR_INVALID_ARG` for invalid configuration
+ * - `ESP_ERR_INVALID_STATE` when already initialized
+ * - other ESP-IDF error codes from lower-level drivers
+ */
 esp_err_t shtc3_sensor_init(shtc3_sensor_config_t *config)
 {
     if (config == NULL) {

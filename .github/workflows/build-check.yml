@@ -1,0 +1,75 @@
+name: Build Check (No Flash)
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  esp32c6_build:
+    name: ESP32-C6 Build (ESP-IDF + ESP-Matter)
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.4.1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install host dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git \
+            ca-certificates \
+            libglib2.0-dev-bin \
+            libavahi-client-dev \
+            libssl-dev \
+            libicu-dev \
+            pkg-config
+
+      - name: Fetch ESP-Matter v1.5
+        run: |
+          git clone --depth 1 --recursive --branch release/v1.5 \
+            https://github.com/espressif/esp-matter.git
+
+      - name: Build M5NanoC6 firmware (compile only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          source "$IDF_PATH/export.sh"
+          export ESP_MATTER_PATH="$GITHUB_WORKSPACE/esp-matter"
+          source "$ESP_MATTER_PATH/export.sh"
+
+          cd m5nanoc6-temperature
+          idf.py set-target esp32c6
+          idf.py build
+
+  syntax_check:
+    name: C/C++ Syntax Check Fallback
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cppcheck
+
+      - name: Run cppcheck (fallback when full cross-build is not feasible)
+        run: |
+          set -euo pipefail
+          cppcheck \
+            --std=c++17 \
+            --language=c++ \
+            --enable=warning,style,performance,portability \
+            --error-exitcode=1 \
+            --suppress=missingIncludeSystem \
+            --inline-suppr \
+            --quiet \
+            m5nanoc6-temperature/main \
+            nrf52840-dongle-temperature/src

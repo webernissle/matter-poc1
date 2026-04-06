@@ -25,17 +25,26 @@
 #include <drivers/shtc3.h>
 #include <drivers/pir.h>
 
+/** Log tag used by ESP logging macros in this translation unit. */
 static const char *TAG = "app_main";
 
+/** Default NodeLabel written to Basic Information cluster on endpoint 0. */
 static constexpr const char *kHomeNodeLabel = "EasyClimate";
+/** Default VendorName written to Basic Information cluster. */
 static constexpr const char *kVendorName = "jumpbit.com";
+/** Default ProductName written to Basic Information cluster. */
 static constexpr const char *kProductName = "M5NanoC6 Env Sensor";
+/** Default ProductLabel written to Basic Information cluster. */
 static constexpr const char *kProductLabel = "Matter Temp+Humidity";
+/** Default HardwareVersionString written to Basic Information cluster. */
 static constexpr const char *kHardwareVersionString = "v1";
+/** Default SoftwareVersionString written to Basic Information cluster. */
 static constexpr const char *kSoftwareVersionString = "1.0.0";
 
 #if CONFIG_ENABLE_TEST_SETUP_PARAMS
+/** Example onboarding QR code shown when test setup parameters are enabled. */
 static constexpr const char *kDefaultMatterQrCode = "MT:Y.K9042C00KA0648G00";
+/** Example manual pairing code shown when test setup parameters are enabled. */
 static constexpr const char *kDefaultMatterManualPairingCode = "34970112332";
 #endif
 
@@ -44,9 +53,18 @@ using namespace esp_matter::attribute;
 using namespace esp_matter::endpoint;
 using namespace chip::app::Clusters;
 
-// Application cluster specification, 7.18.2.11. Temperature
-// represents a temperature on the Celsius scale with a resolution of 0.01°C.
-// temp = (temperature in °C) x 100
+/**
+ * Publish temperature updates into the Matter Temperature Measurement cluster.
+ *
+ * The callback schedules work onto the Matter thread via SystemLayer, then updates
+ * the MeasuredValue attribute using centi-degrees Celsius:
+ * $value = temperature_{C} \times 100$.
+ *
+ * Official references:
+ * - ESP-Matter project: https://github.com/espressif/esp-matter
+ * - Matter TemperatureMeasurement cluster docs (SDK source):
+ *   https://github.com/project-chip/connectedhomeip/tree/master/src/app/clusters/temperature-measurement
+ */
 static void temp_sensor_notification(uint16_t endpoint_id, float temp, void *user_data)
 {
     // schedule the attribute update so that we can report it from matter thread
@@ -63,9 +81,16 @@ static void temp_sensor_notification(uint16_t endpoint_id, float temp, void *use
     });
 }
 
-// Application cluster specification, 2.6.4.1. MeasuredValue Attribute
-// represents the humidity in percent.
-// humidity = (humidity in %) x 100
+/**
+ * Publish humidity updates into the Matter Relative Humidity Measurement cluster.
+ *
+ * The callback schedules work onto the Matter thread and updates MeasuredValue
+ * using centi-percent units:
+ * $value = humidity_{\%} \times 100$.
+ *
+ * Official reference:
+ * https://github.com/project-chip/connectedhomeip/tree/master/src/app/clusters/relative-humidity-measurement
+ */
 static void humidity_sensor_notification(uint16_t endpoint_id, float humidity, void *user_data)
 {
     // schedule the attribute update so that we can report it from matter thread
@@ -82,6 +107,12 @@ static void humidity_sensor_notification(uint16_t endpoint_id, float humidity, v
     });
 }
 
+/**
+ * Publish PIR occupancy changes into the Matter Occupancy Sensing cluster.
+ *
+ * Official reference:
+ * https://github.com/project-chip/connectedhomeip/tree/master/src/app/clusters/occupancy-sensor
+ */
 static void occupancy_sensor_notification(uint16_t endpoint_id, bool occupancy, void *user_data)
 {
     // schedule the attribute update so that we can report it from matter thread
@@ -98,6 +129,15 @@ static void occupancy_sensor_notification(uint16_t endpoint_id, bool occupancy, 
     });
 }
 
+/**
+ * Create and register factory reset button handling.
+ *
+ * Uses BSP button helpers and app reset utility to wire long-press reset behavior.
+ *
+ * Official references:
+ * - ESP-BSP: https://github.com/espressif/esp-bsp
+ * - ESP-IDF button component docs: https://docs.espressif.com/projects/esp-iot-solution/en/latest/input_device/button.html
+ */
 static esp_err_t factory_reset_button_register()
 {
     button_handle_t push_button;
@@ -106,6 +146,14 @@ static esp_err_t factory_reset_button_register()
     return app_reset_button_register(push_button);
 }
 
+/**
+ * Open a basic commissioning window when the device has no fabrics.
+ *
+ * This is typically used after last-fabric removal to allow re-commissioning.
+ *
+ * Official reference:
+ * https://project-chip.github.io/connectedhomeip-doc/guides/commissioning.html
+ */
 static void open_commissioning_window_if_necessary()
 {
     VerifyOrReturn(chip::Server::GetInstance().GetFabricTable().FabricCount() == 0);
@@ -123,6 +171,11 @@ static void open_commissioning_window_if_necessary()
     }
 }
 
+/**
+ * Matter device event callback.
+ *
+ * Handles commissioning lifecycle and fabric events for logging and recovery.
+ */
 static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
 {
     switch (event->Type) {
@@ -148,8 +201,15 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg)
     }
 }
 
-// This callback is invoked when clients interact with the Identify Cluster.
-// In the callback implementation, an endpoint can identify itself. (e.g., by flashing an LED or light).
+/**
+ * Identify cluster callback.
+ *
+ * Invoked when a commissioner/client triggers Identify for an endpoint.
+ * This sample logs the request and does not drive a physical indicator.
+ *
+ * Official reference:
+ * https://github.com/project-chip/connectedhomeip/tree/master/src/app/clusters/identify
+ */
 static esp_err_t app_identification_cb(identification::callback_type_t type, uint16_t endpoint_id, uint8_t effect_id,
                                        uint8_t effect_variant, void *priv_data)
 {
@@ -157,9 +217,12 @@ static esp_err_t app_identification_cb(identification::callback_type_t type, uin
     return ESP_OK;
 }
 
-// This callback is called for every attribute update. The callback implementation shall
-// handle the desired attributes and return an appropriate error code. If the attribute
-// is not of your interest, please do not return an error code and strictly return ESP_OK.
+/**
+ * Global attribute update callback for ESP-Matter node attributes.
+ *
+ * This sample is telemetry-focused and accepts writes by returning success without
+ * custom handling.
+ */
 static esp_err_t app_attribute_update_cb(attribute::callback_type_t type, uint16_t endpoint_id, uint32_t cluster_id,
                                          uint32_t attribute_id, esp_matter_attr_val_t *val, void *priv_data)
 {
@@ -168,6 +231,11 @@ static esp_err_t app_attribute_update_cb(attribute::callback_type_t type, uint16
     return ESP_OK;
 }
 
+/**
+ * Log onboarding codes for commissioning during bring-up/testing.
+ *
+ * If test setup params are disabled, prompts the user to query runtime values.
+ */
 static void log_commissioning_codes()
 {
 #if CONFIG_ENABLE_TEST_SETUP_PARAMS
@@ -179,6 +247,15 @@ static void log_commissioning_codes()
 #endif
 }
 
+/**
+ * Populate Basic Information cluster metadata on endpoint 0.
+ *
+ * Updates vendor/product labels and software/hardware strings so controller apps
+ * show meaningful device identity fields.
+ *
+ * Official reference:
+ * https://github.com/project-chip/connectedhomeip/tree/master/src/app/clusters/basic-information
+ */
 static void set_basic_information_metadata()
 {
     auto update_basic_str = [](uint32_t attribute_id, const char *value) {
@@ -219,6 +296,22 @@ static void set_basic_information_metadata()
 
 extern "C" void app_main()
 {
+    /**
+     * Main firmware entrypoint.
+     *
+     * Flow:
+     * 1. Initialize NVS and reset button.
+     * 2. Create Matter node and set Basic Information metadata.
+     * 3. Create temperature, humidity, and occupancy endpoints.
+     * 4. Initialize SHTC3 and PIR sensor drivers with endpoint callbacks.
+     * 5. Configure OpenThread (when enabled) and start Matter stack.
+     * 6. Print commissioning/onboarding codes.
+     *
+     * Official references:
+     * - ESP-Matter: https://docs.espressif.com/projects/esp-matter/en/latest/
+     * - ESP-IDF app_main entrypoint model:
+     *   https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/startup.html
+     */
     /* Initialize the ESP NVS layer */
     nvs_flash_init();
 
@@ -243,7 +336,11 @@ extern "C" void app_main()
     endpoint_t * humidity_sensor_ep = humidity_sensor::create(node, &humidity_sensor_config, ENDPOINT_FLAG_NONE, NULL);
     ABORT_APP_ON_FAILURE(humidity_sensor_ep != nullptr, ESP_LOGE(TAG, "Failed to create humidity_sensor endpoint"));
 
-    // initialize temperature and humidity sensor driver (shtc3)
+    /**
+     * Static SHTC3 driver configuration retained for the app lifetime.
+     *
+     * Contains endpoint bindings for temperature and humidity callbacks.
+     */
     static shtc3_sensor_config_t shtc3_config = {
         .temperature = {
             .cb = temp_sensor_notification,
@@ -269,7 +366,11 @@ extern "C" void app_main()
     endpoint_t * occupancy_sensor_ep = occupancy_sensor::create(node, &occupancy_sensor_config, ENDPOINT_FLAG_NONE, NULL);
     ABORT_APP_ON_FAILURE(occupancy_sensor_ep != nullptr, ESP_LOGE(TAG, "Failed to create occupancy_sensor endpoint"));
 
-    // initialize occupancy sensor driver (pir)
+    /**
+     * Static PIR driver configuration retained for the app lifetime.
+     *
+     * Contains occupancy callback and associated endpoint binding.
+     */
     static pir_sensor_config_t pir_config = {
         .cb = occupancy_sensor_notification,
         .endpoint_id = endpoint::get_id(occupancy_sensor_ep),
