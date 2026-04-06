@@ -5,6 +5,8 @@ as a Matter-over-Thread temperature sensor. The device commissions into **Apple 
 through a **HomePod mini** that acts as both the Matter controller and the
 **Thread Border Router**.
 
+This guide assumes a native **Ubuntu Server 24.04 LTS** environment, not WSL2.
+
 ---
 
 ## Hardware
@@ -13,27 +15,33 @@ through a **HomePod mini** that acts as both the Matter controller and the
 |------|---------|
 | Board | [Nordic nRF52840 Dongle (PCA10059)](https://www.nordicsemi.com/Products/Development-hardware/nRF52840-Dongle) |
 | MCU | nRF52840 (ARM Cortex-M4F, 64 MHz) |
-| Temperature sensor | nRF52840 on-chip TEMP peripheral (±0.25 °C typical) |
-| Connectivity | IEEE 802.15.4 (Thread) + Bluetooth 5 |
-| USB | USB-A plug (DFU bootloader for flashing) |
+| Temperature sensor | nRF52840 on-chip TEMP peripheral |
+| Connectivity | Bluetooth Low Energy, Thread, Zigbee, 802.15.4, ANT, and 2.4 GHz proprietary protocols |
+| USB | USB-A plug, USB-powered, built-in USB bootloader, USB communication |
 | Flash | 1 MB |
+| RAM | 256 KB |
+| GPIO | 15 GPIOs exposed on castellated edge pads |
+| User I/O | User-programmable LEDs and button |
+| Debug support | No onboard debug support; programming is done through USB bootloader |
 
 > **Important:** The nRF52840 Dongle uses **Matter over Thread**. The HomePod mini
-> (2nd generation or HomePod mini running HomeOS 16.3+) includes a built-in
+> or another Apple Thread Border Router includes a built-in
 > **Thread Border Router** that connects the Thread mesh network to your IP network
 > and Apple Home. No separate Border Router hardware is required.
+
+Official Nordic references:
+- Product page: https://www.nordicsemi.com/Products/Development-hardware/nRF52840-Dongle
+- Hardware user guide: https://docs.nordicsemi.com/bundle/ug_nrf52840_dongle/page/UG/nrf52840_Dongle/intro.html
 
 ---
 
 ## Software Requirements
 
-All steps below are performed inside **Windows Subsystem for Linux (WSL2)** running
-**Ubuntu 24.04 LTS**. See [`../docs/wsl-setup.md`](../docs/wsl-setup.md) for the
-full WSL setup instructions.
+All steps below are performed on **Ubuntu Server 24.04 LTS**.
 
 | Component | Version |
 |-----------|---------|
-| Ubuntu (WSL2) | 24.04 LTS |
+| Ubuntu Server | 24.04 LTS |
 | nRF Connect SDK | v2.6.x |
 | west | ≥ 1.2 |
 | CMake | 3.20+ |
@@ -61,29 +69,47 @@ nrf52840-dongle-temperature/
 
 ## Step 1 – Set Up the Build Environment
 
-> **Prerequisite:** Complete the WSL setup described in
-> [`../docs/wsl-setup.md`](../docs/wsl-setup.md) before continuing.
+> **Prerequisite:** Install the standard Ubuntu build tools and ensure your user
+> can access serial devices such as `/dev/ttyACM0`.
 
 ### 1.1 Install system dependencies
 
 ```bash
 sudo apt-get update && sudo apt-get install -y \
-    git cmake ninja-build gperf ccache dfu-util wget \
+  git build-essential cmake ninja-build gperf ccache dfu-util wget \
     python3 python3-pip python3-dev python3-venv \
-    xz-utils file make gcc-multilib g++-multilib \
+  xz-utils file \
     libsdl2-dev libmagic1 usbutils
+
+# Allow current user to access USB serial devices after next login
+sudo usermod -aG dialout "$USER"
 ```
 
-### 1.2 Install west (Zephyr's meta-tool)
+On Ubuntu Server 24.04 `arm64`, do not install `gcc-multilib` or `g++-multilib`.
+Those packages are for x86 multilib toolchains and are not needed for this Zephyr/nRF build flow.
+
+### 1.2 Create a Python virtualenv and install west
+
+Ubuntu 24.04 enforces **PEP 668** (externally managed environment), which prevents
+global or `--user` `pip` installs without `--break-system-packages`. A virtualenv is
+the clean solution and is also [recommended by the Zephyr project](https://docs.zephyrproject.org/latest/develop/beyond-GSG.html#python-pip)
+when package versions may conflict with system packages.
 
 ```bash
-pip3 install --user west
-# Add ~/.local/bin to PATH if not already present
-echo 'export PATH=$HOME/.local/bin:$PATH' >> ~/.bashrc
-source ~/.bashrc
+# Create a dedicated virtualenv for all Zephyr/nRF tooling
+python3 -m venv ~/.venv/zephyr
 
-west --version   # should print: West version: x.x.x
+# Activate it (required for every new shell session)
+source ~/.venv/zephyr/bin/activate
+
+# Install west inside the venv (no --user flag needed inside a venv)
+pip install -U west
+
+west --version
 ```
+
+Official west installation reference:
+- https://docs.zephyrproject.org/latest/develop/west/install.html
 
 ### 1.3 Initialise nRF Connect SDK v2.6
 
@@ -97,15 +123,17 @@ west zephyr-export
 
 ### 1.4 Install Python dependencies
 
+Ensure the venv is active (`source ~/.venv/zephyr/bin/activate`), then:
+
 ```bash
 cd ~/ncs/zephyr
-pip3 install --user -r scripts/requirements.txt
+pip install -r scripts/requirements.txt
 
 cd ~/ncs/nrf
-pip3 install --user -r scripts/requirements-base.txt
+pip install -r scripts/requirements-base.txt
 
 cd ~/ncs/bootloader/mcuboot
-pip3 install --user -r scripts/requirements.txt
+pip install -r scripts/requirements.txt
 ```
 
 ### 1.5 Install the Zephyr SDK (ARM toolchain)
@@ -128,8 +156,8 @@ The nRF52840 Dongle uses DFU (Device Firmware Update) for programming – it doe
 not have a standard SWD debug header.
 
 ```bash
-# Install nrfutil (Nordic's unified tool)
-pip3 install --user nrfutil
+# Install nrfutil inside the venv (venv must be active)
+pip install nrfutil
 
 # Verify
 nrfutil version
@@ -141,13 +169,15 @@ nrfutil version
 Add the following block to your `~/.bashrc` so that all tools are available in every new terminal session:
 
 ```bash
-# nRF Connect SDK / Zephyr (for nRF52840 Dongle)
+# Activate the Zephyr Python virtualenv (provides west, nrfutil, and all pip deps)
+if [ -f ~/.venv/zephyr/bin/activate ]; then
+    source ~/.venv/zephyr/bin/activate
+fi
+
+# nRF Connect SDK / Zephyr
 if [ -d ~/ncs ]; then
     export ZEPHYR_BASE=~/ncs/zephyr
 fi
-
-# nrfutil and west (installed globally)
-export PATH="$HOME/.local/bin:$PATH"
 
 # Zephyr SDK
 if [ -d ~/ncs/zephyr-sdk-0.16.5 ]; then
@@ -160,7 +190,7 @@ fi
 ## Step 3 – Build the Firmware
 
 ```bash
-cd ~/matter-poc1/nrf52840-dongle-temperature
+cd ~/repos/matter-poc1/nrf52840-dongle-temperature
 
 # Build for the nRF52840 Dongle
 west build -b nrf52840dongle/nrf52840 \
@@ -184,7 +214,7 @@ Build complete!
 
 ### Generating the DFU package
 
-The nRF52840 Dongle is flashed using a DFU zip package:
+The nRF52840 Dongle is flashed using its built-in USB bootloader and a DFU zip package.
 
 ```bash
 # Package is generated automatically by west build.
@@ -210,9 +240,6 @@ The nRF52840 Dongle must be put into **DFU (bootloader) mode** before flashing.
    USB connector) **while the LED is off**, or press it once quickly to enter
    DFU mode.
 3. The LED will flash **red** (LD2 on the silk screen) indicating DFU mode.
-
-> In WSL2, first attach the USB device using usbipd-win
-> (see [`../docs/wsl-setup.md`](../docs/wsl-setup.md)).
 
 ### 4.2 Identify the USB DFU serial port
 
@@ -336,13 +363,9 @@ uart:~$ matter onboardingcodes ble
 
 - Ensure the Dongle is in **DFU mode** (LED flashing red).
 - Try a different USB port or USB hub.
-- In WSL2, verify the USB device is attached: `lsusb | grep Nordic`.
-- If using WSL2, ensure usbipd-win has attached the DFU device:
-  ```powershell
-  # In Windows PowerShell (admin)
-  usbipd list
-  usbipd attach --wsl --busid <BUSID>
-  ```
+- Verify Linux can see the device: `lsusb | grep -i nordic`.
+- If `/dev/ttyACM0` is missing after the application boots, check `dmesg | tail`.
+- If serial access is denied, log out and back in after adding your user to `dialout`.
 
 ### Thread network not joining
 
@@ -369,6 +392,15 @@ uart:~$ matter onboardingcodes ble
 uart:~$ matter device factoryreset
 
 # Or rebuild and reflash (clears all NVS)
-west build --pristine
-# Flash the new build with nrfutil (see Step 3)
+west build --pristine -b nrf52840dongle/nrf52840 -- -DCONF_FILE=prj.conf
+# Flash the new build with nrfutil (see Step 4)
 ```
+
+## Accuracy Notes
+
+This README has been aligned with Nordic's official product page and hardware guide:
+
+- The dongle is described as a low-cost USB development dongle with built-in USB bootloader support.
+- It has no onboard debug support.
+- It exposes 15 GPIOs and user LEDs/button.
+- The environment assumptions now target native Ubuntu Server 24.04 rather than WSL2.
