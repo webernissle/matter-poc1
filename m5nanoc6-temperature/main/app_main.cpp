@@ -15,6 +15,8 @@
 #include <esp_matter_ota.h>
 #include <nvs_flash.h>
 
+#include <cstring>
+
 #include <app_openthread_config.h>
 #include <app_reset.h>
 #include <common_macros.h>
@@ -24,6 +26,18 @@
 #include <drivers/pir.h>
 
 static const char *TAG = "app_main";
+
+static constexpr const char *kHomeNodeLabel = "EasyClimate";
+static constexpr const char *kVendorName = "jumpbit.com";
+static constexpr const char *kProductName = "M5NanoC6 Env Sensor";
+static constexpr const char *kProductLabel = "Matter Temp+Humidity";
+static constexpr const char *kHardwareVersionString = "v1";
+static constexpr const char *kSoftwareVersionString = "1.0.0";
+
+#if CONFIG_ENABLE_TEST_SETUP_PARAMS
+static constexpr const char *kDefaultMatterQrCode = "MT:Y.K9042C00KA0648G00";
+static constexpr const char *kDefaultMatterManualPairingCode = "34970112332";
+#endif
 
 using namespace esp_matter;
 using namespace esp_matter::attribute;
@@ -154,6 +168,55 @@ static esp_err_t app_attribute_update_cb(attribute::callback_type_t type, uint16
     return ESP_OK;
 }
 
+static void log_commissioning_codes()
+{
+#if CONFIG_ENABLE_TEST_SETUP_PARAMS
+    ESP_LOGI(TAG, "Matter QR Code: %s", kDefaultMatterQrCode);
+    ESP_LOGI(TAG, "Matter manual pairing code: %s", kDefaultMatterManualPairingCode);
+    ESP_LOGI(TAG, "Apple Home: Add Accessory, then scan the QR code (or use manual pairing code).");
+#else
+    ESP_LOGI(TAG, "Commissioning parameters are custom. Use 'matter onboardingcodes' in CHIP shell to print current QR/manual codes.");
+#endif
+}
+
+static void set_basic_information_metadata()
+{
+    auto update_basic_str = [](uint32_t attribute_id, const char *value) {
+        esp_matter_attr_val_t val = esp_matter_char_str(const_cast<char *>(value), strlen(value));
+        return attribute::update(0, BasicInformation::Id, attribute_id, &val);
+    };
+
+    esp_err_t err = update_basic_str(BasicInformation::Attributes::VendorName::Id, kVendorName);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to set VendorName, err:%d", err);
+    }
+
+    err = update_basic_str(BasicInformation::Attributes::ProductName::Id, kProductName);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to set ProductName, err:%d", err);
+    }
+
+    err = update_basic_str(BasicInformation::Attributes::ProductLabel::Id, kProductLabel);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to set ProductLabel, err:%d", err);
+    }
+
+    err = update_basic_str(BasicInformation::Attributes::HardwareVersionString::Id, kHardwareVersionString);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to set HardwareVersionString, err:%d", err);
+    }
+
+    err = update_basic_str(BasicInformation::Attributes::SoftwareVersionString::Id, kSoftwareVersionString);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to set SoftwareVersionString, err:%d", err);
+    }
+
+    err = update_basic_str(BasicInformation::Attributes::NodeLabel::Id, kHomeNodeLabel);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to set NodeLabel, err:%d", err);
+    }
+}
+
 extern "C" void app_main()
 {
     /* Initialize the ESP NVS layer */
@@ -167,6 +230,8 @@ extern "C" void app_main()
     node::config_t node_config;
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
     ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
+
+    set_basic_information_metadata();
 
     // add temperature sensor device
     temperature_sensor::config_t temp_sensor_config;
@@ -198,6 +263,8 @@ extern "C" void app_main()
         chip::to_underlying(OccupancySensing::OccupancySensorTypeEnum::kPir);
     occupancy_sensor_config.occupancy_sensing.occupancy_sensor_type_bitmap =
         chip::to_underlying(OccupancySensing::OccupancySensorTypeBitmap::kPir);
+    occupancy_sensor_config.occupancy_sensing.feature_flags =
+        chip::to_underlying(OccupancySensing::Feature::kPassiveInfrared);
 
     endpoint_t * occupancy_sensor_ep = occupancy_sensor::create(node, &occupancy_sensor_config, ENDPOINT_FLAG_NONE, NULL);
     ABORT_APP_ON_FAILURE(occupancy_sensor_ep != nullptr, ESP_LOGE(TAG, "Failed to create occupancy_sensor endpoint"));
@@ -223,4 +290,6 @@ extern "C" void app_main()
     /* Matter start */
     err = esp_matter::start(app_event_cb);
     ABORT_APP_ON_FAILURE(err == ESP_OK, ESP_LOGE(TAG, "Failed to start Matter, err:%d", err));
+
+    log_commissioning_codes();
 }

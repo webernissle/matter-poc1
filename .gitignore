@@ -3,6 +3,12 @@ sdkconfig
 sdkconfig.old
 build/
 
+*.log
+*.bin
+*.elf
+*.map
+*.img
+
 # nRF Connect SDK / Zephyr build artifacts
 # (the build/ directories are already covered above)
 .west/

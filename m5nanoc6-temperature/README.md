@@ -67,11 +67,19 @@ idf.py -p /dev/ttyACM0 flash monitor
 
 ### 2. Find QR Code
 
-The device generates a Matter QR code on first boot. Look for:
+The firmware now prints the Matter onboarding codes at startup. Look for:
 
 ```
 I (12345) app_main: QR Code: MT:Y.K9042C00KA0648G00
 I (12346) app_main: Manual pairing code: 34970112332
+```
+
+Check in main/app_main.cpp the define settings!
+
+If these lines are not visible in your monitor session, run this in the device shell:
+
+```
+matter onboardingcodes
 ```
 
 ### 3. Commission in Apple Home
@@ -85,6 +93,11 @@ I (12346) app_main: Manual pairing code: 34970112332
 ### 4. Verify Connection
 
 Once paired, the temperature reading should appear in the Home app and update periodically.
+
+### Wi-Fi Defaults in This Repo
+
+- Default Wi-Fi SSID is preconfigured as `SCHOFSEGGEL`.
+- Default Wi-Fi password is empty (`""`). If your network is secured, set it in `idf.py menuconfig` under `Component config -> CHIP Device Layer -> Wi-Fi Station`.
 
 ---
 

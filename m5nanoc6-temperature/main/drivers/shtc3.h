@@ -6,10 +6,10 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
-// This file implements the SHTC3 temperature and humidity sensor driver.
+// This file implements the SHT3x (SHT30/SHT31) temperature and humidity sensor driver.
 // This is implemented keeping the Matter requirements in mind.
 //
-// Datasheet: https://sensirion.com/media/documents/643F9C8E/63A5A436/Datasheet_SHTC3.pdf
+// Datasheet: https://sensirion.com/media/documents/213E6A3B/63A5A569/Datasheet_SHT3x_DIS.pdf
 
 #pragma once
 

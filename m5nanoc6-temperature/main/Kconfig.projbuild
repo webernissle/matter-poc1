@@ -2,15 +2,15 @@ menu "Example Configuration"
 
     config SHTC3_I2C_SDA_PIN
         int "I2C SDA Pin"
-        default 4
+        default 2
         help
-            GPIO number for I2C master data
+            GPIO number for I2C master data (M5NanoC6 Grove port: G2=GPIO2)
 
     config SHTC3_I2C_SCL_PIN
         int "I2C SCL Pin"
-        default 5
+        default 1
         help
-            GPIO number for I2C master clock
+            GPIO number for I2C master clock (M5NanoC6 Grove port: G1=GPIO1)
 
     config PIR_DATA_PIN
         int "PIR Data Pin"

@@ -97,6 +97,12 @@ Key menus to review:
 | `Component config → CHIP Device Layer → Wi-Fi station` | Pre-provisioned Wi-Fi credentials (optional) |
 | `Component config → ESP Matter → Enable CHIP Shell` | Enable/disable the debug shell |
 
+Default repo configuration for this project:
+- Wi-Fi station SSID: `SCHOFSEGGEL`
+- Wi-Fi station password: empty string (`""`)
+
+If your WLAN is password protected, set `Wi-Fi station password` before flashing.
+
 > **Important for production:** Change the Discriminator and Passcode from the
 > defaults. The defaults (`3840` / `20202021`) are test values and are
 > well-known.
