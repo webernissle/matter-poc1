@@ -41,7 +41,7 @@ HomePod mini  ←──── Thread Border Router (for nRF52840)
 
 | Document | Description |
 |----------|-------------|
-| [`docs/wsl-setup.md`](docs/wsl-setup.md) | WSL2 Ubuntu 24.04 environment setup |
+| [`docs/ubuntu-setup.md`](docs/wsl-setup.md) | Ubuntu 24.04 environment setup |
 | [`docs/apple-home-commissioning.md`](docs/apple-home-commissioning.md) | Commissioning both devices into Apple Home |
 | [`m5nanoc6-temperature/README.md`](m5nanoc6-temperature/README.md) | M5NanoC6 build, flash & test guide |
 | [`nrf52840-dongle-temperature/README.md`](nrf52840-dongle-temperature/README.md) | nRF52840 Dongle build, flash & test guide |
@@ -50,12 +50,15 @@ HomePod mini  ←──── Thread Border Router (for nRF52840)
 
 ## Quick Start
 
-### 1. Set up WSL2 Ubuntu 24.04
+### 1. Set up Ubuntu 24.04
 
-See **[docs/wsl-setup.md](docs/wsl-setup.md)** for the complete guide.
+See **[docs/ubuntu-setup.md](docs/ubuntu-setup.md)** for the complete guide.
 
 ### 2. Build and flash the M5NanoC6
 
+See **[m5nanoc6-temperature/README.md](m5nanoc6-temperature/README.md)** for full details.
+
+Shortcut:
 ```bash
 # Source ESP-IDF + ESP Matter SDK
 source ~/esp/esp-idf/export.sh
@@ -67,9 +70,9 @@ idf.py build
 idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-See **[m5nanoc6-temperature/README.md](m5nanoc6-temperature/README.md)** for full details.
-
 ### 3. Build and flash the nRF52840 Dongle
+
+See **[nrf52840-dongle-temperature/README.md](nrf52840-dongle-temperature/README.md)** for full details.
 
 ```bash
 cd nrf52840-dongle-temperature
@@ -79,8 +82,6 @@ west build -b nrf52840dongle/nrf52840 -- -DCONF_FILE=prj.conf
 nrfutil dfu usb-serial -pkg build/zephyr/dfu_application.zip \
     -p /dev/ttyACM0 -b 115200
 ```
-
-See **[nrf52840-dongle-temperature/README.md](nrf52840-dongle-temperature/README.md)** for full details.
 
 ### 4. Commission into Apple Home
 
@@ -92,16 +93,16 @@ See **[docs/apple-home-commissioning.md](docs/apple-home-commissioning.md)** for
 
 | Tool | Used for |
 |------|----------|
-| WSL2 Ubuntu 24.04 | All build and flash operations |
-| ESP-IDF v5.2 | M5NanoC6 (ESP32-C6) toolchain |
-| ESP Matter SDK v1.3 | M5NanoC6 Matter stack |
-| nRF Connect SDK v2.6 | nRF52840 Dongle toolchain + Matter stack |
+| Ubuntu | All build and flash operations |
+| ESP-IDF | M5NanoC6 (ESP32-C6) toolchain |
+| ESP Matter SDK | M5NanoC6 Matter stack |
+| nRF Connect SDK | nRF52840 Dongle toolchain + Matter stack |
 | west | nRF Connect SDK build tool |
 | nrfutil | nRF52840 Dongle DFU flashing |
 | usbipd-win | USB device forwarding from Windows to WSL2 |
 
 > **CLI only:** No IDE is required. All build, flash, and test operations are
-> performed from the command line inside WSL2.
+> performed from the command line. Use [build.sh](build.sh) script.
 
 ---
 

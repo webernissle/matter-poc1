@@ -1,9 +1,8 @@
 # M5NanoC6 Matter Temperature Sensor
 
-This project demonstrates a **Matter-over-Wi-Fi temperature sensor** using the **M5Stack NanoC6** (ESP32-C6) development board. The device uses the ESP32-C6's built-in temperature sensor and can be commissioned into **Apple Home** via a HomePod mini (Matter border router).
+This project demonstrates a **Matter-over-Wi-Fi temperature sensor** using the **M5Stack NanoC6** (ESP32-C6) development board. The device uses the Grove ENV sensor attached by a Grove cable and can be commissioned into **Apple Home** via a HomePod mini (Matter border router).
 
 **Based on:** [ESP-Matter Sensors Example](https://github.com/espressif/esp-matter/tree/release/v1.5/examples/sensors)  
-**Tested with:** ESP-IDF v5.4.1 + ESP-Matter v1.5
 
 ---
 
@@ -16,10 +15,8 @@ This project demonstrates a **Matter-over-Wi-Fi temperature sensor** using the *
 | **Flash** | 4 MB |
 | **RAM** | 512 KB SRAM |
 | **Wireless** | Wi-Fi 6 (802.11ax) + Bluetooth 5.3 |
-| **Temperature Sensor** | ESP32-C6 on-chip sensor (±2°C accuracy) |
+| **Temperature Sensor** | external Grove SHTC3 Env sensor |
 | **USB** | USB-C (Serial + JTAG) |
-
-> **Note:** This project uses the **ESP32-C6 internal temperature sensor** - no external sensors required!
 
 ---
 
@@ -28,29 +25,11 @@ This project demonstrates a **Matter-over-Wi-Fi temperature sensor** using the *
 See **[SETUP.md](SETUP.md)** for detailed installation and build instructions.
 
 ### Prerequisites
-- ESP-IDF v5.4.1
-- ESP-Matter SDK v1.5
+- ESP-IDF
+- ESP-Matter SDK
 - M5Stack NanoC6 board
+- Grove Env sensor with Grove cable
 - USB-C cable
-
-### Build & Flash
-
-```bash
-# Set up environment
-source ~/esp/esp-idf/export.sh
-
-# Navigate to project
-cd ~/repos/matter-poc1/m5nanoc6-temperature
-
-# Configure for ESP32-C6
-idf.py set-target esp32c6
-
-# Build
-idf.py build
-
-# Flash and monitor
-idf.py -p /dev/ttyACM0 flash monitor
-```
 
 ---
 
@@ -227,6 +206,7 @@ m5nanoc6-temperature/
 - 🔌 [Matter Specification](https://csa-iot.org/all-solutions/matter/)
 - 💾 [ESP-Matter GitHub](https://github.com/espressif/esp-matter)
 - 🔧 [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/en/v5.4.1/)
+- 🏠 [ESP-Matter Sensors Example](https://github.com/espressif/esp-matter/tree/release/v1.5/examples/sensors)
 
 ---
 

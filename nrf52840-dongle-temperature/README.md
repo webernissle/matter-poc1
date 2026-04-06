@@ -134,10 +134,30 @@ pip3 install --user nrfutil
 # Verify
 nrfutil version
 ```
+---
+
+## Step 2 – Recommended Shell Configuration
+
+Add the following block to your `~/.bashrc` so that all tools are available in every new terminal session:
+
+```bash
+# nRF Connect SDK / Zephyr (for nRF52840 Dongle)
+if [ -d ~/ncs ]; then
+    export ZEPHYR_BASE=~/ncs/zephyr
+fi
+
+# nrfutil and west (installed globally)
+export PATH="$HOME/.local/bin:$PATH"
+
+# Zephyr SDK
+if [ -d ~/ncs/zephyr-sdk-0.16.5 ]; then
+    export ZEPHYR_SDK_INSTALL_DIR=~/ncs/zephyr-sdk-0.16.5
+fi
+```
 
 ---
 
-## Step 2 – Build the Firmware
+## Step 3 – Build the Firmware
 
 ```bash
 cd ~/matter-poc1/nrf52840-dongle-temperature
@@ -179,11 +199,11 @@ nrfutil pkg generate \
 
 ---
 
-## Step 3 – Flash the nRF52840 Dongle
+## Step 4 – Flash the nRF52840 Dongle
 
 The nRF52840 Dongle must be put into **DFU (bootloader) mode** before flashing.
 
-### 3.1 Enter DFU mode
+### 4.1 Enter DFU mode
 
 1. Insert the Dongle into a USB port.
 2. Press the **RESET button** (the small button on the side of the PCB near the
@@ -194,14 +214,14 @@ The nRF52840 Dongle must be put into **DFU (bootloader) mode** before flashing.
 > In WSL2, first attach the USB device using usbipd-win
 > (see [`../docs/wsl-setup.md`](../docs/wsl-setup.md)).
 
-### 3.2 Identify the USB DFU serial port
+### 4.2 Identify the USB DFU serial port
 
 ```bash
 ls /dev/ttyACM*
 # Typically: /dev/ttyACM0
 ```
 
-### 3.3 Flash using nrfutil
+### 4.3 Flash using nrfutil
 
 ```bash
 nrfutil dfu usb-serial \
@@ -213,7 +233,7 @@ nrfutil dfu usb-serial \
 Wait for the progress bar to complete. The Dongle reboots automatically after
 flashing and begins running the Matter firmware.
 
-### 3.4 Alternative: nrfjprog (requires J-Link or nRF9161 DK as programmer)
+### 4.4 Alternative: nrfjprog (requires J-Link or nRF9161 DK as programmer)
 
 If you have a J-Link programmer connected via SWD (not available on the Dongle
 PCB itself without modification), you can use:
@@ -224,11 +244,11 @@ nrfjprog --program build/zephyr/zephyr.hex --chiperase --verify --reset
 
 ---
 
-## Step 4 – Monitor the Device
+## Step 5 – Monitor the Device
 
 The Dongle exposes a USB CDC ACM serial port for logging.
 
-### 4.1 Connect to the console
+### 5.1 Connect to the console
 
 ```bash
 # Install minicom or use screen/picocom
@@ -240,7 +260,7 @@ minicom -D /dev/ttyACM0 -b 115200
 
 Press **Ctrl+A X** to exit minicom.
 
-### 4.2 Expected boot output
+### 5.2 Expected boot output
 
 ```
 *** Booting nRF Connect SDK v2.6.0 ***
@@ -257,7 +277,7 @@ Note the **QR code** and **manual pairing code** from the log.
 
 ---
 
-## Step 5 – Commission into Apple Home
+## Step 6 – Commission into Apple Home
 
 See the full commissioning guide at
 [`../docs/apple-home-commissioning.md`](../docs/apple-home-commissioning.md).
@@ -276,9 +296,9 @@ See the full commissioning guide at
 
 ---
 
-## Step 6 – Verify Operation
+## Step 7 – Verify Operation
 
-### 6.1 Serial console
+### 7.1 Serial console
 
 After commissioning and Thread attachment you should see:
 
@@ -293,12 +313,12 @@ After commissioning and Thread attachment you should see:
 > For an accurate ambient reading, connect an external I2C sensor (e.g. SHT40)
 > and update the DTS overlay and application accordingly.
 
-### 6.2 Apple Home
+### 7.2 Apple Home
 
 - Open **Home** app → Room → **nRF52840 Temp Sensor**.
 - Temperature updates every 30 seconds (or on change if you adjust the code).
 
-### 6.3 Matter shell commands
+### 7.3 Matter shell commands
 
 With `CONFIG_CHIP_LIB_SHELL=y` you can send commands via the serial console:
 

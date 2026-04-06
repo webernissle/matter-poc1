@@ -77,6 +77,26 @@ idf.py --version
 cd $ESP_MATTER_PATH
 git describe --all  # Should show: release/v1.5
 ```
+---
+
+## Recommended Shell Configuration
+
+Add the following block to your `~/.bashrc` so that all tools are available in every new terminal session:
+
+```bash
+# ESP-IDF (for M5NanoC6)
+if [ -f ~/esp/esp-idf/export.sh ]; then
+    source ~/esp/esp-idf/export.sh > /dev/null 2>&1
+fi
+
+# ESP Matter SDK (for M5NanoC6)
+if [ -d ~/esp/esp-matter ]; then
+    export ESP_MATTER_PATH=~/esp/esp-matter
+    if [ -f ~/esp/esp-matter/export.sh ]; then
+        source ~/esp/esp-matter/export.sh > /dev/null 2>&1
+    fi
+fi
+```
 
 ---
 
@@ -198,63 +218,6 @@ idf.py -p /dev/ttyACM0 flash --dry-run
 
 ---
 
-## Troubleshooting
-
-### Issue: Compiler not found
-**Symptom**: "CMAKE_C_COMPILER: ... is not a full path and was not found in the PATH"
-
-**Solution**: Source the IDF environment before building
-```bash
-source ~/esp/esp-idf/export.sh
-idf.py build
-```
-
-### Issue: Unknown Kconfig symbols
-**Symptom**: "warning: unknown kconfig symbol 'CHIP_DEVICE_TYPE'"
-
-**Solution**: These symbols belong to the CHIP component, not ESP-IDF. They are defined in `device_config.h` as preprocessor macros instead.
-
-### Issue: "DefaultSessionKeystore does not name a type"
-**Symptom**: Compilation errors in `Server.h`
-
-**Cause**: Version mismatch between ESP-IDF and ESP-Matter SDK
-
-**Solution**: Ensure you're using:
-- ✅ ESP-IDF v5.4.1 (NOT v5.5.3)
-- ✅ ESP-Matter v1.5 (NOT v1.6+)
-
----
-
-## Flashing the Device
-
-```bash
-# Using ESP ROM bootloader + USB-C
-idf.py -p /dev/ttyACM0 flash
-
-# Monitor serial output
-idf.py -p /dev/ttyACM0 monitor
-
-# Combined build, flash, and monitor
-idf.py -p /dev/ttyACM0 build flash monitor
-```
-
----
-
-## Device Information
-
-| Property | Value |
-|----------|-------|
-| **Board** | M5Stack NanoC6 |
-| **MCU** | ESP32-C6 (RISC-V) |
-| **Clock** | 160 MHz |
-| **Flash** | 4 MB |
-| **RAM** | 512 KB (SRAM) |
-| **Wireless** | Wi-Fi 6 (802.11ax) + Bluetooth 5.3 |
-| **Temp Sensor** | On-chip (±2°C accuracy) |
-| **USB** | USB-C (Serial + JTAG) |
-
----
-
 ## Next Steps
 
 After successful build:
@@ -303,18 +266,3 @@ idf.py build
 # - Wrong ESP-IDF version (must be v5.4.1)
 # - Component dependencies not installed
 ```
-
----
-
-## References
-
-- [ESP-IDF v5.4.1 Documentation](https://docs.espressif.com/projects/esp-idf/en/v5.4.1/)
-- [ESP-Matter SDK Repository](https://github.com/espressif/esp-matter)
-- [ESP-Matter Sensors Example](https://github.com/espressif/esp-matter/tree/release/v1.5/examples/sensors)
-- [Matter Specification](https://csa-iot.org/csa_iot_working_groups/connectivity-standards/matter/)
-- [M5NanoC6 Datasheet](https://docs.m5stack.com/en/core/M5NanoC6)
-
----
-
-**Last Updated:** January 2025  
-**Verified:** ESP-IDF v5.4.1 + ESP-Matter v1.5 + M5NanoC6
